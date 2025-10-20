@@ -15,7 +15,9 @@ import (
 // function set up api endpoints
 func setupRoutes(app *fiber.App) {
 	// Serve the frontend
-	app.Static("/", "./public")
+	app.Static("/", "./public", fiber.Static{
+		Index: "index.html",
+	})
 
 	// API routes
 	app.Post("/api/v1", routes.ShortenURL) // v1 is used so that app using the old url dont break suddenly when new url is formed
