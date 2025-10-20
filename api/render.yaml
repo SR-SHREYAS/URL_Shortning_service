@@ -1,0 +1,29 @@
+services:
+  # The API Web Service
+  - type: web
+    name: url-shortener-api
+    env: node
+    plan: free # or your desired plan
+    repo: https://github.com/your-username/your-repo-name # CHANGE THIS
+    rootDir: ./api
+    buildCommand: "npm install"
+    startCommand: "npm start"
+    envVars:
+      - key: REDIS_ADDRESS
+        fromService:
+          type: redis
+          name: redis-cache
+          property: internalConnectionString
+      - key: DOMAIN
+        fromService:
+          type: web
+          name: url-shortener-api
+          property: url
+      - key: API_QUOTA
+        value: 10 # Or your desired value
+
+  # The Redis Instance
+  - type: redis
+    name: redis-cache
+    plan: free # or your desired plan
+    ipAllowList: [] # Allows access from all your Render services
