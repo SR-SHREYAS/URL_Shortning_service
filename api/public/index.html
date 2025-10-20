@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mr. Compress - Quirk : URL Compression</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom CSS for effects not achievable with standard Tailwind classes */
+        @keyframes subtle-gradient {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        body {
+            background-color: #0a0a0a;
+            background-image:
+                radial-gradient(at 20% 20%, hsla(253, 89%, 60%, 0.2) 0px, transparent 50%),
+                radial-gradient(at 80% 20%, hsla(288, 89%, 60%, 0.2) 0px, transparent 50%),
+                radial-gradient(at 20% 80%, hsla(320, 89%, 60%, 0.2) 0px, transparent 50%),
+                radial-gradient(at 80% 80%, hsla(210, 89%, 60%, 0.2) 0px, transparent 50%);
+        }
+
+        .glass-card {
+            background: rgba(20, 20, 20, 0.6);
+            -webkit-backdrop-filter: blur(12px);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .neon-glow {
+            animation: subtle-gradient 10s ease infinite;
+            background-size: 400% 400%;
+            box-shadow: 0 0 5px #a855f7, 0 0 15px #a855f7, 0 0 30px #a855f7, 0 0 60px #a855f7;
+        }
+        
+        .neon-glow-subtle {
+            box-shadow: 0 0 8px rgba(168, 85, 247, 0.5);
+        }
+
+        /* Hide number input spinners */
+        input[type=number]::-webkit-inner-spin-button,
+        input[type=number]::-webkit-outer-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        input[type=number] {
+            -moz-appearance: textfield;
+        }
+    </style>
+</head>
+<body class="h-full font-sans text-gray-200 antialiased">
+
+    <div class="flex items-center justify-center min-h-full p-4 sm:p-6 lg:p-8">
+        <main class="w-full max-w-2xl mx-auto">
+            
+            <div class="text-center mb-10">
+                <h1 class="text-5xl sm:text-6xl md:text-7xl font-bold text-white tracking-tighter">Mr. Compress</h1>
+                <p class="mt-3 text-lg text-gray-400">Quirk : URL Compression</p>
+            </div>
+
+            <div class="glass-card rounded-2xl p-6 sm:p-8 shadow-2xl">
+                <form id="url-form" class="space-y-6">
+                    
+                    <!-- Long URL Input -->
+                    <div>
+                        <label for="long-url" class="block text-sm font-medium text-gray-300 mb-2">URL to compress</label>
+                        <div class="relative">
+                            <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                                <svg class="h-5 w-5 text-gray-500" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                    <path d="M12.232 4.232a2.5 2.5 0 013.536 3.536l-1.225 1.224a.75.75 0 001.061 1.06l1.224-1.224a4 4 0 00-5.656-5.656l-3 3a4 4 0 00.225 5.865.75.75 0 00.977-1.138 2.5 2.5 0 01-.142-3.665l3-3z" />
+                                    <path d="M8.603 14.397a2.5 2.5 0 01-3.536-3.536l1.225-1.224a.75.75 0 00-1.061-1.06l-1.224 1.224a4 4 0 005.656 5.656l3-3a4 4 0 00-.225-5.865.75.75 0 00-.977 1.138 2.5 2.5 0 01.142 3.665l-3 3z" />
+                                </svg>
+                            </div>
+                            <input type="url" name="long-url" id="long-url" required
+                                class="block w-full rounded-md border-0 bg-white/5 py-3 pl-10 pr-3 text-white ring-1 ring-inset ring-white/10 placeholder:text-gray-500 focus:ring-2 focus:ring-inset focus:ring-purple-500 sm:text-sm sm:leading-6 transition-all duration-200"
+                                placeholder="https://your-very-long-and-unwieldy-url.com/...">
+                        </div>
+                    </div>
+
+                    <!-- Optional Fields -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                        <div>
+                            <label for="custom-alias" class="block text-sm font-medium text-gray-300 mb-2">Custom alias (optional)</label>
+                            <input type="text" name="custom-alias" id="custom-alias"
+                                class="block w-full rounded-md border-0 bg-white/5 py-2.5 px-3 text-white ring-1 ring-inset ring-white/10 placeholder:text-gray-500 focus:ring-2 focus:ring-inset focus:ring-purple-500 sm:text-sm sm:leading-6 transition-all duration-200"
+                                placeholder="e.g., my-link">
+                        </div>
+                        <div>
+                            <label for="expiry" class="block text-sm font-medium text-gray-300 mb-2">Expires in (hours, 0=never)</label>
+                            <input type="number" name="expiry" id="expiry" min="0"
+                                class="block w-full rounded-md border-0 bg-white/5 py-2.5 px-3 text-white ring-1 ring-inset ring-white/10 placeholder:text-gray-500 focus:ring-2 focus:ring-inset focus:ring-purple-500 sm:text-sm sm:leading-6 transition-all duration-200"
+                                placeholder="0">
+                        </div>
+                    </div>
+
+                    <!-- Submit Button -->
+                    <div>
+                        <button type="submit"
+                            class="flex w-full justify-center rounded-md bg-purple-600 px-3 py-3 text-sm font-semibold leading-6 text-white shadow-sm hover:bg-purple-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-purple-600 transition-all duration-300 neon-glow-subtle hover:neon-glow">
+                            Compressify
+                        </button>
+                    </div>
+                </form>
+
+                <!-- Error Display Area -->
+                <div id="error-section" class="mt-6 hidden">
+                    <div class="rounded-md bg-red-900/50 p-4 border border-red-500/50">
+                        <div class="flex">
+                            <div class="flex-shrink-0">
+                                <svg class="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clip-rule="evenodd" />
+                                </svg>
+                            </div>
+                            <div class="ml-3">
+                                <p id="error-message" class="text-sm font-medium text-red-300"></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Result Display Area -->
+                <div id="result-section" class="mt-8 hidden">
+                    <label for="short-url" class="block text-sm font-medium text-gray-300 mb-2">Your compressed URL:</label>
+                    <div class="flex items-center space-x-3">
+                        <a href="#" id="short-url-link" target="_blank" rel="noopener noreferrer"
+                           class="block w-full rounded-md border-0 bg-white/5 py-2.5 px-3 text-purple-300 ring-1 ring-inset ring-purple-500/50 sm:text-sm sm:leading-6 truncate hover:underline">
+                        </a>
+                        <button id="copy-button" type="button"
+                            class="relative inline-flex items-center gap-x-1.5 rounded-md bg-gray-600 px-3 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-gray-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-600 transition-colors duration-200">
+                            <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                <path d="M7 3.5A1.5 1.5 0 018.5 2h3.879a1.5 1.5 0 011.06.44l3.122 3.12A1.5 1.5 0 0117 6.622V16.5a1.5 1.5 0 01-1.5 1.5h-9A1.5 1.5 0 015 16.5v-13A1.5 1.5 0 016.5 2H7v1.5z" />
+                                <path d="M3 5.5A1.5 1.5 0 014.5 4H6v1.5a.5.5 0 00.5.5h1.5v1.5H6a1.5 1.5 0 01-1.5-1.5v-1.5H3z" />
+                            </svg>
+                            <span id="copy-text">Copy</span>
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+        </main>
+    </div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const urlForm = document.getElementById('url-form');
+        const compressButton = urlForm.querySelector('button[type="submit"]');
+        const resultSection = document.getElementById('result-section');
+        const shortUrlLink = document.getElementById('short-url-link');
+        const copyButton = document.getElementById('copy-button');
+        const copyText = document.getElementById('copy-text');
+        const errorSection = document.getElementById('error-section');
+        const errorMessage = document.getElementById('error-message');
+
+        /**
+         * Handles the form submission to generate a short URL.
+         * @param {Event} e - The form submission event.
+         */
+        urlForm.addEventListener('submit', async (e) => {
+            e.preventDefault(); // Prevent the default form submission
+
+            // Reset UI states
+            hideError();
+            resultSection.classList.add('hidden');
+            compressButton.disabled = true;
+            compressButton.textContent = 'Compressing...';
+
+            // Get form data
+            const formData = new FormData(urlForm);
+            const longUrl = formData.get('long-url');
+            const customAlias = formData.get('custom-alias');
+            const expiry = parseInt(formData.get('expiry'), 10) || 0; // Default to 0 if empty
+
+            const body = {
+                url: longUrl,
+                custom_short: customAlias,
+                expiry: expiry,
+            };
+
+            try {
+                const response = await fetch('/api/v1', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(body),
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    // If the API returns an error (e.g., 4xx, 5xx status)
+                    throw new Error(data.error || 'An unknown error occurred.');
+                }
+
+                // The backend now sends the full, working URL in `data.custom_short`
+                const shortUrl = data.custom_short;
+
+                // The user wants to see the branded URL, so we construct it for display
+                const brandedUrl = `COMPRESSED${new URL(shortUrl).pathname}`;
+                displayShortUrl(shortUrl);
+
+            } catch (error) {
+                console.error('API Error:', error);
+                displayError(error.message);
+            } finally {
+                // Re-enable the button
+                compressButton.disabled = false;
+                compressButton.textContent = 'Compressify';
+            }
+        });
+
+        /**
+         * Displays an error message in the UI.
+         * @param {string} message - The error message to display.
+         */
+        function displayError(message) {
+            errorMessage.textContent = message;
+            errorSection.classList.remove('hidden');
+        }
+
+        /**
+         * Hides the error message area.
+         */
+        function hideError() {
+            errorSection.classList.add('hidden');
+        }
+
+        /**
+         * Displays the result section with the generated short URL.
+         * @param {string} url - The short URL to display.
+         */
+        function displayShortUrl(fullUrl) {
+            // Set the actual, clickable link
+            shortUrlLink.href = fullUrl;
+            // Set the branded text for display
+            const brandedText = `COMPRESSED${new URL(fullUrl).pathname}`;
+            shortUrlLink.textContent = brandedText;
+            resultSection.classList.remove('hidden');
+            
+            // Scroll to the result on smaller screens for better visibility
+            if (window.innerWidth < 640) {
+                resultSection.scrollIntoView({ behavior: 'smooth', block: 'end' });
+            }
+        }
+
+        /**
+         * Handles the copy-to-clipboard functionality.
+         */
+        copyButton.addEventListener('click', () => {
+            // Use the modern Clipboard API
+            navigator.clipboard.writeText(shortUrlLink.href).then(() => {
+                // --- Provide visual feedback on successful copy ---
+                const originalText = copyText.textContent;
+                const originalIcon = copyButton.querySelector('svg').outerHTML;
+
+                // Change button content to "Copied!"
+                copyText.textContent = 'Copied!';
+                copyButton.querySelector('svg').style.display = 'none'; // Hide icon
+                copyButton.classList.add('bg-green-600', 'hover:bg-green-500');
+                copyButton.classList.remove('bg-gray-600', 'hover:bg-gray-500');
+
+                // Revert the button content after a few seconds
+                setTimeout(() => {
+                    copyText.textContent = originalText;
+                    copyButton.querySelector('svg').style.display = 'block'; // Show icon
+                    copyButton.classList.remove('bg-green-600', 'hover:bg-green-500');
+                    copyButton.classList.add('bg-gray-600', 'hover:bg-gray-500');
+                }, 2000);
+
+            }).catch(err => {
+                // Handle potential errors, e.g., if permissions are denied
+                console.error('Failed to copy text: ', err);
+                alert('Could not copy text. Please try again.');
+            });
+        });
+
+    });
+</script>
+
+</body>
+</html>
