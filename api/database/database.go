@@ -19,16 +19,12 @@ var (
 
 // createClient is an unexported helper function to create a new Redis client.
 func createClient(dbNo int) *redis.Client {
-	// Use redis.ParseURL to correctly handle full connection strings from services like Render.
-	opt, err := redis.ParseURL(os.Getenv("REDIS_URL"))
-	if err != nil {
-		panic(fmt.Sprintf("Failed to parse Redis URL: %v", err))
-	}
+	rdb := redis.NewClient(&redis.Options{ // rdb is industry standard redis client name initialization
+		Addr:     os.Getenv("REDIS_ADDRESS"),
+		Password: os.Getenv("REDIS_PASSWORD"),
+		DB:       dbNo,
+	})
 
-	// Set the specific database number for this client instance.
-	opt.DB = dbNo
-
-	rdb := redis.NewClient(opt)
 	// Ping the client to ensure the connection is valid.
 	if err := rdb.Ping(Ctx).Err(); err != nil {
 		panic(fmt.Sprintf("Failed to connect to Redis DB %d: %v", dbNo, err))
