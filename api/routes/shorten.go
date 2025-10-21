@@ -1,6 +1,7 @@
 package routes
 
 import (
+	"log"
 	"os"
 	"strconv"
 	"time"
@@ -32,26 +33,31 @@ type response struct {
 // function to shorten the url
 func ShortenURL(c *fiber.Ctx) error {
 
+	ctx := c.Context()
 	body := new(request)
 
 	if err := c.BodyParser(&body); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "cannot parse json"})
 	}
 
-	// implementing rate limiting
-	r2 := database.CreateClient(1) // connect to redis client db 1 where rate limits are stored
-	defer r2.Close()
-
-	value, err := r2.Get(database.Ctx, c.IP()).Result() // get user ip to value
+	// --- Implementing Rate Limiting using the shared Redis client (Rdb1) ---
+	val, err := database.Rdb1.Get(ctx, c.IP()).Result()
 	if err == redis.Nil {
-		_ = r2.Set(database.Ctx, c.IP(), os.Getenv("API_QUOTA"), 30*60*time.Second).Err()
+		// User's first request, set the API quota.
+		// Use a pipeline to be slightly more efficient.
+		pipe := database.Rdb1.Pipeline()
+		pipe.Set(ctx, c.IP(), os.Getenv("API_QUOTA"), 30*60*time.Second)
+		pipe.Exec(ctx)
+	} else if err != nil {
+		log.Printf("Error getting rate limit from Redis DB1: %v", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "database connection error"})
 	} else {
-		valInt, _ := strconv.Atoi(value)
+		valInt, _ := strconv.Atoi(val)
 		if valInt <= 0 { // check on how many api requests are left
-			limit, _ := r2.TTL(database.Ctx, c.IP()).Result() // TTL is used to get the time to live of the key
+			limit, _ := database.Rdb1.TTL(ctx, c.IP()).Result() // TTL is used to get the time to live of the key
 			return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{"error": "rate limit exceeded", "rate_limit_reset": limit})
 		}
-	} // Note: A non-nil error other than redis.Nil is ignored here. Consider logging it.
+	}
 
 	// check if the input sent by user is valid url format
 	if !govalidator.IsURL(body.URL) {
@@ -75,13 +81,10 @@ func ShortenURL(c *fiber.Ctx) error {
 
 	// Note: id is part after Domain Name , we create a custom string from logic and add our own domain name to it
 
-	// connect to db 0 , where url are stored
-	r := database.CreateClient(0)
-	defer r.Close()
-
-	//check if custom short is already in use
-	value, _ = r.Get(database.Ctx, id).Result()
-	if value != "" {
+	// --- Check if custom short is already in use using the shared client (Rdb0) ---
+	// Use the efficient GET + redis.Nil check pattern.
+	_, err = database.Rdb0.Get(ctx, id).Result()
+	if err != redis.Nil {
 		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "url custom short is already in use"})
 	}
 
@@ -91,7 +94,7 @@ func ShortenURL(c *fiber.Ctx) error {
 	}
 
 	// set the url in the database with expiry in seconds (input is in hours)
-	err = r.Set(database.Ctx, id, body.URL, body.Expiry*3600*time.Second).Err()
+	err = database.Rdb0.Set(ctx, id, body.URL, body.Expiry*3600*time.Second).Err()
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "could not shorten url"})
 	}
@@ -105,16 +108,22 @@ func ShortenURL(c *fiber.Ctx) error {
 		XRateLimitReset: 30,
 	}
 
-	// decrement the counter of requests limit
-	r2.Decr(database.Ctx, c.IP())
+	// Decrement the rate limit counter and get the new values.
+	// Using a pipeline is efficient as it sends both commands in one round-trip.
+	pipe := database.Rdb1.Pipeline()
+	pipe.Decr(ctx, c.IP())
+	pipe.TTL(ctx, c.IP())
+	cmds, err := pipe.Exec(ctx)
+	if err == nil {
+		// Get remaining requests
+		remaining, _ := database.Rdb1.Get(ctx, c.IP()).Result()
+		response.XRateRemaining, _ = strconv.Atoi(remaining)
 
-	// get the number of requests remaining
-	val, _ := r2.Get(database.Ctx, c.IP()).Result()
-	response.XRateRemaining, _ = strconv.Atoi(val)
-
-	// get the time to reset the counter
-	ttl, _ := r2.TTL(database.Ctx, c.IP()).Result()
-	response.XRateLimitReset = ttl / time.Nanosecond / time.Minute
+		// Get TTL from pipeline result
+		if ttlCmd, ok := cmds[1].(*redis.DurationCmd); ok {
+			response.XRateLimitReset = ttlCmd.Val() / time.Minute
+		}
+	}
 
 	// return the response , construct full short url
 	response.CustomShort = os.Getenv("DOMAIN") + "/" + id

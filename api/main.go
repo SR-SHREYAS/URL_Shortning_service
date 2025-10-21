@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"url_shortner_service/database"
 	"url_shortner_service/routes" // importing the routes
 
 	"github.com/gofiber/fiber/v2" // importing fiber
@@ -32,6 +33,9 @@ func main() {
 	if err != nil {
 		fmt.Println(err)
 	}
+
+	// Initialize the database connections once.
+	database.Init()
 
 	app := fiber.New() // new fiber app just like express // app is now main server object (instance of fiber app)
 
