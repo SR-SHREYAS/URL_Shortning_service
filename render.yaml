@@ -2,6 +2,7 @@ services:
   - type: web
     name: url-shortning-service
     runtime: docker
+    plan: free
     dockerContext: ./api
     dockerfilePath: ./api/Dockerfile
     healthCheckPath: /
@@ -17,4 +18,5 @@ services:
 
   - type: keyvalue
     name: url-shortning-redis
+    plan: free
     ipAllowList: []
