@@ -117,7 +117,7 @@ func ShortenURL(c *fiber.Ctx) error {
 	response.XRateLimitReset = ttl / time.Nanosecond / time.Minute
 
 	// return the response , construct full short url
-	response.CustomShort = os.Getenv("DOMAIN") + "/" + id
+	response.CustomShort = helper.ServiceBaseURL(c.BaseURL()) + "/" + id
 
 	// status 200
 	return c.Status(fiber.StatusOK).JSON(response)

@@ -1,32 +1,25 @@
-#stage 1
+FROM golang:1.22-alpine AS builder
 
-FROM golang:alpine as builder
+WORKDIR /src
 
-RUN mkdir /build
+COPY go.mod go.sum ./
+RUN go mod download
 
-ADD . /build/
+COPY . .
+RUN CGO_ENABLED=0 GOOS=linux go build -o /out/main .
 
-WORKDIR /build
-
-RUN go build -o main .
-
-
-#stage 2
-
-FROM alpine 
+FROM alpine:3.20
 
 RUN adduser -S -D -H -h /app appuser
 
-USER appuser
-
-COPY . /app
-
-COPY --from=builder /build/main/ app/
-
 WORKDIR /app
+
+COPY --from=builder /out/main ./main
+COPY public ./public
+
+USER appuser
 
 EXPOSE 4000
 
 CMD ["./main"]
-
 

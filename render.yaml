@@ -1,0 +1,20 @@
+services:
+  - type: web
+    name: url-shortning-service
+    runtime: docker
+    dockerContext: ./api
+    dockerfilePath: ./api/Dockerfile
+    healthCheckPath: /
+    autoDeploy: true
+    envVars:
+      - key: API_QUOTA
+        value: "10"
+      - key: REDIS_URL
+        fromService:
+          type: keyvalue
+          name: url-shortning-redis
+          property: connectionString
+
+  - type: keyvalue
+    name: url-shortning-redis
+    ipAllowList: []
