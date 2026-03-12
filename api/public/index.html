@@ -184,6 +184,11 @@
         let generatedShortUrl = '';
         const hasClipboardSupport = Boolean(navigator.clipboard?.writeText);
         const hasRichClipboardSupport = hasClipboardSupport && Boolean(window.ClipboardItem && navigator.clipboard?.write);
+        const buttonHelpMessages = {
+            'copy-button': 'Copy the shortened web address so you can paste and share it anywhere.',
+            'copy-rich-button': 'Copy a clickable version of the shortened link for apps that support formatted text.',
+            'copy-markdown-button': 'Copy the shortened link in Markdown format for README files, notes, or documentation.',
+        };
 
         function setCopyButtonsState(isEnabled) {
             copyButton.disabled = !isEnabled || !hasClipboardSupport;
@@ -222,6 +227,10 @@
                     }, this.timeoutMs);
                 }
             }
+
+            hasActiveTemporaryMessage() {
+                return this.timeoutId !== null;
+            }
         }
 
         const clipboardStatus = new ClipboardStatus(clipboardHelpText, CLIPBOARD_STATUS_TIMEOUT_MS);
@@ -238,6 +247,37 @@
             }
 
             clipboardStatus.setDefault('Choose the format that fits where you want to paste the shortened link.');
+        }
+
+        function attachClipboardHoverMessage(button) {
+            const helpMessage = buttonHelpMessages[button.id];
+            if (!helpMessage) {
+                return;
+            }
+
+            const showHelpMessage = () => {
+                if (clipboardStatus.hasActiveTemporaryMessage()) {
+                    return;
+                }
+
+                clipboardStatus.show(helpMessage);
+            };
+
+            const showDefaultMessage = () => {
+                if (clipboardStatus.hasActiveTemporaryMessage()) {
+                    return;
+                }
+
+                clipboardStatus.show(clipboardStatus.defaultMessage, clipboardStatus.defaultIsWarning);
+            };
+
+            ['mouseenter', 'focus'].forEach((eventName) => {
+                button.addEventListener(eventName, showHelpMessage);
+            });
+
+            ['mouseleave', 'blur'].forEach((eventName) => {
+                button.addEventListener(eventName, showDefaultMessage);
+            });
         }
 
         /**
@@ -436,6 +476,9 @@
 
         setClipboardSupportMessage();
         setCopyButtonsState(false);
+        attachClipboardHoverMessage(copyButton);
+        attachClipboardHoverMessage(copyRichButton);
+        attachClipboardHoverMessage(copyMarkdownButton);
 
     });
 </script>
