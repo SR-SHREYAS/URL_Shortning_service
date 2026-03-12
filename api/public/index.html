@@ -160,7 +160,7 @@
                             <span id="copy-markdown-text">Copy Markdown</span>
                         </button>
                     </div>
-                    <p class="mt-3 text-xs text-gray-400">Rich link paste works in editors that support formatted clipboard content. Plain text fields will fall back to the short URL.</p>
+                    <p id="clipboard-help-text" class="mt-3 text-xs text-gray-400">Rich link paste works in editors that support formatted clipboard content. Plain text fields will fall back to the short URL.</p>
                 </div>
 
             </div>
@@ -180,14 +180,28 @@
         const copyRichText = document.getElementById('copy-rich-text');
         const copyMarkdownButton = document.getElementById('copy-markdown-button');
         const copyMarkdownText = document.getElementById('copy-markdown-text');
+        const clipboardHelpText = document.getElementById('clipboard-help-text');
         const errorSection = document.getElementById('error-section');
         const errorMessage = document.getElementById('error-message');
         let generatedShortUrl = '';
+        const hasClipboardSupport = Boolean(navigator.clipboard?.writeText);
+        const hasRichClipboardSupport = hasClipboardSupport && Boolean(window.ClipboardItem && navigator.clipboard?.write);
 
         function setCopyButtonsState(isEnabled) {
-            copyButton.disabled = !isEnabled;
-            copyRichButton.disabled = !isEnabled;
-            copyMarkdownButton.disabled = !isEnabled;
+            copyButton.disabled = !isEnabled || !hasClipboardSupport;
+            copyMarkdownButton.disabled = !isEnabled || !hasClipboardSupport;
+            copyRichButton.disabled = !isEnabled || !hasRichClipboardSupport;
+        }
+
+        function setClipboardSupportMessage() {
+            if (!hasClipboardSupport) {
+                clipboardHelpText.textContent = 'Clipboard copy is not supported in this browser. Please copy the generated short URL manually.';
+                return;
+            }
+
+            if (!hasRichClipboardSupport) {
+                clipboardHelpText.textContent = 'Plain URL and Markdown copy are available. Rich link copy requires a browser with ClipboardItem support.';
+            }
         }
 
         /**
@@ -300,81 +314,96 @@
         }
 
         function updateCopyButtonState(button, textNode, successLabel) {
-            const originalText = textNode.textContent;
             const icon = button.querySelector('svg');
+            const originalText = button.dataset.originalText || textNode.textContent;
+            button.dataset.originalText = originalText;
+
+            if (button.dataset.copyTimeoutId) {
+                clearTimeout(Number(button.dataset.copyTimeoutId));
+                delete button.dataset.copyTimeoutId;
+            }
 
             textNode.textContent = successLabel;
             icon.style.display = 'none';
             button.classList.add('bg-green-600', 'hover:bg-green-500');
             button.classList.remove('bg-gray-600', 'hover:bg-gray-500');
 
-            setTimeout(() => {
-                textNode.textContent = originalText;
+            const timeoutId = window.setTimeout(() => {
+                textNode.textContent = button.dataset.originalText || originalText;
                 icon.style.display = 'block';
                 button.classList.remove('bg-green-600', 'hover:bg-green-500');
                 button.classList.add('bg-gray-600', 'hover:bg-gray-500');
+                delete button.dataset.copyTimeoutId;
             }, 2000);
+
+            button.dataset.copyTimeoutId = String(timeoutId);
         }
 
-        async function copyRichLink() {
+        function createRichClipboardItem() {
             const linkLabel = getLinkLabel();
             const html = `<a href="${generatedShortUrl}">${escapeHtml(linkLabel)}</a>`;
 
-            if (window.ClipboardItem) {
-                const clipboardItem = new ClipboardItem({
-                    'text/html': new Blob([html], { type: 'text/html' }),
-                    'text/plain': new Blob([generatedShortUrl], { type: 'text/plain' }),
-                });
+            return new ClipboardItem({
+                'text/html': new Blob([html], { type: 'text/html' }),
+                'text/plain': new Blob([generatedShortUrl], { type: 'text/plain' }),
+            });
+        }
 
-                await navigator.clipboard.write([clipboardItem]);
+        async function copyWithFeedback({ button, textNode, successLabel, producer, errorMessage }) {
+            if (!generatedShortUrl) {
                 return;
             }
 
-            await navigator.clipboard.writeText(generatedShortUrl);
+            try {
+                await producer();
+                updateCopyButtonState(button, textNode, successLabel);
+            } catch (err) {
+                console.error(errorMessage, err);
+                alert('Could not complete the copy action. Please try again.');
+            }
         }
 
         copyButton.addEventListener('click', async () => {
-            if (!generatedShortUrl) {
-                return;
-            }
-
-            try {
-                await navigator.clipboard.writeText(generatedShortUrl);
-                updateCopyButtonState(copyButton, copyText, 'Copied!');
-            } catch (err) {
-                console.error('Failed to copy text: ', err);
-                alert('Could not copy the short URL. Please try again.');
-            }
+            await copyWithFeedback({
+                button: copyButton,
+                textNode: copyText,
+                successLabel: 'Copied!',
+                producer: () => navigator.clipboard.writeText(generatedShortUrl),
+                errorMessage: 'Failed to copy text:',
+            });
         });
 
         copyRichButton.addEventListener('click', async () => {
-            if (!generatedShortUrl) {
-                return;
-            }
-
-            try {
-                await copyRichLink();
-                updateCopyButtonState(copyRichButton, copyRichText, 'Copied!');
-            } catch (err) {
-                console.error('Failed to copy rich link: ', err);
-                alert('Could not copy the rich link. Please try again.');
-            }
+            await copyWithFeedback({
+                button: copyRichButton,
+                textNode: copyRichText,
+                successLabel: 'Copied!',
+                producer: () => navigator.clipboard.write([createRichClipboardItem()]),
+                errorMessage: 'Failed to copy rich link:',
+            });
         });
 
         copyMarkdownButton.addEventListener('click', async () => {
-            if (!generatedShortUrl) {
-                return;
-            }
-
-            try {
-                const markdownLink = `[${getLinkLabel()}](${generatedShortUrl})`;
-                await navigator.clipboard.writeText(markdownLink);
-                updateCopyButtonState(copyMarkdownButton, copyMarkdownText, 'Copied!');
-            } catch (err) {
-                console.error('Failed to copy markdown link: ', err);
-                alert('Could not copy the markdown link. Please try again.');
-            }
+            await copyWithFeedback({
+                button: copyMarkdownButton,
+                textNode: copyMarkdownText,
+                successLabel: 'Copied!',
+                producer: () => {
+                    const markdownLink = `[${getLinkLabel()}](${generatedShortUrl})`;
+                    return navigator.clipboard.writeText(markdownLink);
+                },
+                errorMessage: 'Failed to copy markdown link:',
+            });
         });
+
+        setClipboardSupportMessage();
+        if (!hasClipboardSupport) {
+            clipboardHelpText.classList.add('text-amber-300');
+        } else if (!hasRichClipboardSupport) {
+            clipboardHelpText.classList.add('text-amber-300');
+        }
+
+        setCopyButtonsState(false);
 
     });
 </script>
