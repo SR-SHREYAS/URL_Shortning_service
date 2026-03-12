@@ -31,7 +31,7 @@ This project implements a high-performance URL shortening service, akin to popul
 
 The project is deployed on Render and is available here:
 
-`https://url-shortning-service-msrq.onrender.com`
+https://url-shortning-service-msrq.onrender.com
 
 ## Project Overview
 
