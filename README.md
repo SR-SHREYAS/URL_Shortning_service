@@ -41,7 +41,9 @@ The service allows users to:
 2.  **Custom Aliases**: Optionally specify a custom short code for their URL.
 3.  **Expiry**: Set an expiry duration for the shortened URL.
 4.  **Redirection**: Access the original long URL by navigating to the shortened link.
-5.  **Rate Limiting**: Control API usage to prevent abuse.
+5.  **Clipboard Actions**: Copy the generated short URL as a plain URL, a rich clickable link, or a Markdown link.
+6.  **Custom Link Label**: Customize the visible text used for rich-link and Markdown copy actions.
+7.  **Rate Limiting**: Control API usage to prevent abuse.
 
 ## Key Technologies and Concepts
 
@@ -172,7 +174,11 @@ The service allows users to:
     -   Inputting a long URL.
     -   Optionally specifying a custom short alias and expiry.
     -   Submitting the request to the backend API.
-    -   Displaying the shortened URL and allowing it to be copied.
+    -   Displaying the shortened URL in a branded format.
+    -   Allowing the result to be copied as a plain short URL.
+    -   Allowing the result to be copied as a rich clickable link for supported editors.
+    -   Allowing the result to be copied as a Markdown link.
+    -   Allowing the user to customize the copied link label for rich-link and Markdown formats.
     -   Showing error messages from the API.
 
 ## Flow of Execution

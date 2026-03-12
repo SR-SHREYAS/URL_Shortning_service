@@ -127,15 +127,38 @@
                         <a href="#" id="short-url-link" target="_blank" rel="noopener noreferrer"
                            class="block w-full rounded-md border-0 bg-white/5 py-2.5 px-3 text-purple-300 ring-1 ring-inset ring-purple-500/50 sm:text-sm sm:leading-6 truncate hover:underline">
                         </a>
-                        <button id="copy-button" type="button"
-                            class="relative inline-flex items-center gap-x-1.5 rounded-md bg-gray-600 px-3 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-gray-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-600 transition-colors duration-200">
+                    </div>
+
+                    <div class="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
+                        <button id="copy-button" type="button" disabled aria-describedby="copy-button-help"
+                            class="relative inline-flex items-center justify-center gap-x-1.5 rounded-md bg-gray-600 px-3 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-gray-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-600 transition-colors duration-200 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-gray-600">
                             <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                                 <path d="M7 3.5A1.5 1.5 0 018.5 2h3.879a1.5 1.5 0 011.06.44l3.122 3.12A1.5 1.5 0 0117 6.622V16.5a1.5 1.5 0 01-1.5 1.5h-9A1.5 1.5 0 015 16.5v-13A1.5 1.5 0 016.5 2H7v1.5z" />
                                 <path d="M3 5.5A1.5 1.5 0 014.5 4H6v1.5a.5.5 0 00.5.5h1.5v1.5H6a1.5 1.5 0 01-1.5-1.5v-1.5H3z" />
                             </svg>
-                            <span id="copy-text">Copy</span>
+                            <span id="copy-text">Copy URL</span>
+                        </button>
+                        <button id="copy-rich-button" type="button" disabled aria-describedby="copy-rich-button-help"
+                            class="relative inline-flex items-center justify-center gap-x-1.5 rounded-md bg-gray-600 px-3 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-gray-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-600 transition-colors duration-200 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-gray-600">
+                            <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                <path d="M5.5 4A2.5 2.5 0 003 6.5v7A2.5 2.5 0 005.5 16h9a2.5 2.5 0 002.5-2.5v-7A2.5 2.5 0 0014.5 4h-9zm.75 3.25a.75.75 0 011.06 0L10 9.94l2.69-2.69a.75.75 0 111.06 1.06l-2.69 2.69 2.69 2.69a.75.75 0 11-1.06 1.06L10 12.06l-2.69 2.69a.75.75 0 01-1.06-1.06l2.69-2.69-2.69-2.69a.75.75 0 010-1.06z" />
+                            </svg>
+                            <span id="copy-rich-text">Copy Rich Link</span>
+                        </button>
+                        <button id="copy-markdown-button" type="button" disabled aria-describedby="copy-markdown-button-help"
+                            class="relative inline-flex items-center justify-center gap-x-1.5 rounded-md bg-gray-600 px-3 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-gray-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-600 transition-colors duration-200 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-gray-600">
+                            <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                <path d="M3.5 4A1.5 1.5 0 002 5.5v9A1.5 1.5 0 003.5 16h13a1.5 1.5 0 001.5-1.5v-9A1.5 1.5 0 0016.5 4h-13zM5 7.25a.75.75 0 01.75.75v4a.75.75 0 01-1.5 0V8A.75.75 0 015 7.25zm2.5.06a.75.75 0 01.82.19L10 9.77l1.68-2.27a.75.75 0 011.35.44v4.06a.75.75 0 01-1.5 0V10.2l-.93 1.26a.75.75 0 01-1.2 0L8.5 10.2V12a.75.75 0 01-1.5 0V8a.75.75 0 01.5-.69zm6.5-.06a.75.75 0 01.75.75v4a.75.75 0 01-1.5 0V8a.75.75 0 01.75-.75z" />
+                            </svg>
+                            <span id="copy-markdown-text">Copy Markdown</span>
                         </button>
                     </div>
+                    <div class="sr-only">
+                        <p id="copy-button-help">Copy the shortened web address so you can paste and share it anywhere.</p>
+                        <p id="copy-rich-button-help">Copy a clickable link with the shortened text as the label for apps that support rich text.</p>
+                        <p id="copy-markdown-button-help">Copy a Markdown version of the shortened link for README files, notes, or documentation.</p>
+                    </div>
+                    <p id="clipboard-help-text" class="mt-3 min-h-[1.25rem] text-xs text-gray-400" aria-live="polite"></p>
                 </div>
 
             </div>
@@ -150,8 +173,112 @@
         const shortUrlLink = document.getElementById('short-url-link');
         const copyButton = document.getElementById('copy-button');
         const copyText = document.getElementById('copy-text');
+        const copyRichButton = document.getElementById('copy-rich-button');
+        const copyRichText = document.getElementById('copy-rich-text');
+        const copyMarkdownButton = document.getElementById('copy-markdown-button');
+        const copyMarkdownText = document.getElementById('copy-markdown-text');
+        const clipboardHelpText = document.getElementById('clipboard-help-text');
         const errorSection = document.getElementById('error-section');
         const errorMessage = document.getElementById('error-message');
+        const CLIPBOARD_STATUS_TIMEOUT_MS = 5000;
+        let generatedShortUrl = '';
+        const hasClipboardSupport = Boolean(navigator.clipboard?.writeText);
+        const hasRichClipboardSupport = hasClipboardSupport && Boolean(window.ClipboardItem && navigator.clipboard?.write);
+        const buttonHelpMessages = {
+            'copy-button': 'Copy the shortened web address so you can paste and share it anywhere.',
+            'copy-rich-button': 'Copy a clickable version of the shortened link for apps that support formatted text.',
+            'copy-markdown-button': 'Copy the shortened link in Markdown format for README files, notes, or documentation.',
+        };
+
+        function setCopyButtonsState(isEnabled) {
+            copyButton.disabled = !isEnabled || !hasClipboardSupport;
+            copyMarkdownButton.disabled = !isEnabled || !hasClipboardSupport;
+            copyRichButton.disabled = !isEnabled || !hasRichClipboardSupport;
+        }
+
+        class ClipboardStatus {
+            constructor(element, timeoutMs) {
+                this.element = element;
+                this.timeoutMs = timeoutMs;
+                this.timeoutId = null;
+                this.defaultMessage = '';
+                this.defaultIsWarning = false;
+            }
+
+            setDefault(message, isWarning = false) {
+                this.defaultMessage = message;
+                this.defaultIsWarning = isWarning;
+                this.show(message, isWarning);
+            }
+
+            show(message, isWarning = false, shouldClear = false) {
+                this.element.textContent = message;
+                this.element.classList.toggle('text-amber-300', isWarning);
+                this.element.classList.toggle('text-gray-400', !isWarning);
+
+                if (this.timeoutId) {
+                    clearTimeout(this.timeoutId);
+                    this.timeoutId = null;
+                }
+
+                if (shouldClear) {
+                    this.timeoutId = window.setTimeout(() => {
+                        this.show(this.defaultMessage, this.defaultIsWarning);
+                    }, this.timeoutMs);
+                }
+            }
+
+            hasActiveTemporaryMessage() {
+                return this.timeoutId !== null;
+            }
+        }
+
+        const clipboardStatus = new ClipboardStatus(clipboardHelpText, CLIPBOARD_STATUS_TIMEOUT_MS);
+
+        function setClipboardSupportMessage() {
+            if (!hasClipboardSupport) {
+                clipboardStatus.setDefault('Clipboard copy is not supported in this browser. Please copy the shortened URL manually.', true);
+                return;
+            }
+
+            if (!hasRichClipboardSupport) {
+                clipboardStatus.setDefault('Plain URL and Markdown copy are available. Rich link copy requires a browser with fuller clipboard support.', true);
+                return;
+            }
+
+            clipboardStatus.setDefault('Choose the format that fits where you want to paste the shortened link.');
+        }
+
+        function attachClipboardHoverMessage(button) {
+            const helpMessage = buttonHelpMessages[button.id];
+            if (!helpMessage) {
+                return;
+            }
+
+            const showHelpMessage = () => {
+                if (clipboardStatus.hasActiveTemporaryMessage()) {
+                    return;
+                }
+
+                clipboardStatus.show(helpMessage);
+            };
+
+            const showDefaultMessage = () => {
+                if (clipboardStatus.hasActiveTemporaryMessage()) {
+                    return;
+                }
+
+                clipboardStatus.show(clipboardStatus.defaultMessage, clipboardStatus.defaultIsWarning);
+            };
+
+            ['mouseenter', 'focus'].forEach((eventName) => {
+                button.addEventListener(eventName, showHelpMessage);
+            });
+
+            ['mouseleave', 'blur'].forEach((eventName) => {
+                button.addEventListener(eventName, showDefaultMessage);
+            });
+        }
 
         /**
          * Handles the form submission to generate a short URL.
@@ -194,11 +321,7 @@
                     throw new Error(data.error || 'An unknown error occurred.');
                 }
 
-                // The backend now sends the full, working URL in `data.custom_short`
                 const shortUrl = data.custom_short;
-
-                // The user wants to see the branded URL, so we construct it for display
-                const brandedUrl = `COMPRESSED${new URL(shortUrl).pathname}`;
                 displayShortUrl(shortUrl);
 
             } catch (error) {
@@ -232,6 +355,7 @@
          * @param {string} url - The short URL to display.
          */
         function displayShortUrl(fullUrl) {
+            generatedShortUrl = fullUrl;
             // Set the actual, clickable link
             shortUrlLink.href = fullUrl;
             // Set the branded text for display
@@ -243,38 +367,118 @@
             if (window.innerWidth < 640) {
                 resultSection.scrollIntoView({ behavior: 'smooth', block: 'end' });
             }
+
+            setCopyButtonsState(true);
         }
 
         /**
          * Handles the copy-to-clipboard functionality.
          */
-        copyButton.addEventListener('click', () => {
-            // Use the modern Clipboard API
-            navigator.clipboard.writeText(shortUrlLink.href).then(() => {
-                // --- Provide visual feedback on successful copy ---
-                const originalText = copyText.textContent;
-                const originalIcon = copyButton.querySelector('svg').outerHTML;
+        function getLinkLabel() {
+            return shortUrlLink.textContent.trim();
+        }
 
-                // Change button content to "Copied!"
-                copyText.textContent = 'Copied!';
-                copyButton.querySelector('svg').style.display = 'none'; // Hide icon
-                copyButton.classList.add('bg-green-600', 'hover:bg-green-500');
-                copyButton.classList.remove('bg-gray-600', 'hover:bg-gray-500');
+        function escapeHtml(value) {
+            return value
+                .replaceAll('&', '&amp;')
+                .replaceAll('<', '&lt;')
+                .replaceAll('>', '&gt;')
+                .replaceAll('"', '&quot;')
+                .replaceAll("'", '&#39;');
+        }
 
-                // Revert the button content after a few seconds
-                setTimeout(() => {
-                    copyText.textContent = originalText;
-                    copyButton.querySelector('svg').style.display = 'block'; // Show icon
-                    copyButton.classList.remove('bg-green-600', 'hover:bg-green-500');
-                    copyButton.classList.add('bg-gray-600', 'hover:bg-gray-500');
-                }, 2000);
+        function updateCopyButtonState(button, textNode, successLabel) {
+            const icon = button.querySelector('svg');
+            const originalText = button.dataset.originalText || textNode.textContent;
+            button.dataset.originalText = originalText;
 
-            }).catch(err => {
-                // Handle potential errors, e.g., if permissions are denied
-                console.error('Failed to copy text: ', err);
-                alert('Could not copy text. Please try again.');
+            if (button.dataset.copyTimeoutId) {
+                clearTimeout(Number(button.dataset.copyTimeoutId));
+                delete button.dataset.copyTimeoutId;
+            }
+
+            textNode.textContent = successLabel;
+            icon.style.display = 'none';
+            button.classList.add('bg-green-600', 'hover:bg-green-500');
+            button.classList.remove('bg-gray-600', 'hover:bg-gray-500');
+
+            const timeoutId = window.setTimeout(() => {
+                textNode.textContent = button.dataset.originalText || originalText;
+                icon.style.display = 'block';
+                button.classList.remove('bg-green-600', 'hover:bg-green-500');
+                button.classList.add('bg-gray-600', 'hover:bg-gray-500');
+                delete button.dataset.copyTimeoutId;
+            }, 2000);
+
+            button.dataset.copyTimeoutId = String(timeoutId);
+        }
+
+        function createRichClipboardItem() {
+            const linkLabel = getLinkLabel();
+            const html = `<a href="${generatedShortUrl}">${escapeHtml(linkLabel)}</a>`;
+
+            return new ClipboardItem({
+                'text/html': new Blob([html], { type: 'text/html' }),
+                'text/plain': new Blob([generatedShortUrl], { type: 'text/plain' }),
+            });
+        }
+
+        async function copyWithFeedback({ button, textNode, successLabel, producer, errorMessage, statusMessage }) {
+            if (!generatedShortUrl) {
+                return;
+            }
+
+            try {
+                await producer();
+                updateCopyButtonState(button, textNode, successLabel);
+                clipboardStatus.show(statusMessage, false, true);
+            } catch (err) {
+                console.error(errorMessage, err);
+                clipboardStatus.show('Could not complete the copy action. Please try again.', true, true);
+            }
+        }
+
+        copyButton.addEventListener('click', async () => {
+            await copyWithFeedback({
+                button: copyButton,
+                textNode: copyText,
+                successLabel: 'Copied!',
+                producer: () => navigator.clipboard.writeText(generatedShortUrl),
+                errorMessage: 'Failed to copy text:',
+                statusMessage: 'Shortened URL copied.',
             });
         });
+
+        copyRichButton.addEventListener('click', async () => {
+            await copyWithFeedback({
+                button: copyRichButton,
+                textNode: copyRichText,
+                successLabel: 'Copied!',
+                producer: () => navigator.clipboard.write([createRichClipboardItem()]),
+                errorMessage: 'Failed to copy rich link:',
+                statusMessage: 'Rich link copied.',
+            });
+        });
+
+        copyMarkdownButton.addEventListener('click', async () => {
+            await copyWithFeedback({
+                button: copyMarkdownButton,
+                textNode: copyMarkdownText,
+                successLabel: 'Copied!',
+                producer: () => {
+                    const markdownLink = `[${getLinkLabel()}](${generatedShortUrl})`;
+                    return navigator.clipboard.writeText(markdownLink);
+                },
+                errorMessage: 'Failed to copy markdown link:',
+                statusMessage: 'Markdown link copied.',
+            });
+        });
+
+        setClipboardSupportMessage();
+        setCopyButtonsState(false);
+        attachClipboardHoverMessage(copyButton);
+        attachClipboardHoverMessage(copyRichButton);
+        attachClipboardHoverMessage(copyMarkdownButton);
 
     });
 </script>
