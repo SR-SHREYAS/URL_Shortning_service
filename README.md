@@ -6,6 +6,7 @@ This project implements a high-performance URL shortening service, akin to popul
 
 ## Table of Contents
 
+- [Live Deployment](#live-deployment)
 - [Project Overview](#project-overview)
 - [Key Technologies and Concepts](#key-technologies-and-concepts)
   - [Go (Golang)](#go-golang)
@@ -25,6 +26,12 @@ This project implements a high-performance URL shortening service, akin to popul
 - [Future Goals](#future-goals)
 
 ---
+
+## Live Deployment
+
+The project is deployed on Render and is available here:
+
+`https://url-shortning-service-msrq.onrender.com`
 
 ## Project Overview
 
