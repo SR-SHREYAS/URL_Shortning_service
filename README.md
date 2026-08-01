@@ -1,328 +1,227 @@
-# Mr. Compress - URL Shortening Service
+# Boilerplate
 
-## Quirk: URL Compression
+Monorepo boilerplate for a Go backend built with Gin, plus TypeScript workspace tooling at the repo root. The goal of this repository is to provide a production-minded starting point that keeps architecture, observability, validation, and task automation consistent while letting future projects swap business logic without rebuilding the foundation.
 
-This project implements a high-performance URL shortening service, akin to popular services like Bitly or TinyURL. It's built using Go with the Fiber web framework and leverages Redis for efficient data storage and retrieval, including URL mappings and rate limiting. The service provides a simple API to shorten long URLs and a redirection mechanism for accessing the original links.
+## What lives here
 
-## Table of Contents
+- `apps/backend`: the Go API service.
+- `packages/*`: shared workspace packages for frontend or utility code.
+- `package.json`: root workspace control plane for Bun and Turbo.
+- `apps/backend/Taskfile.yml`: backend task automation.
+- `apps/backend/.env.sample`: canonical environment sample for the backend.
 
-- [Live Deployment](#live-deployment)
-- [Project Overview](#project-overview)
-- [Key Technologies and Concepts](#key-technologies-and-concepts)
-  - [Go (Golang)](#go-golang)
-  - [Fiber Web Framework](#fiber-web-framework)
-  - [Redis](#redis)
-  - [go-redis/redis/v8](#go-redisredisv8)
-  - [godotenv](#godotenv)
-  - [govalidator](#govalidator)
-  - [google/uuid](#googleuuid)
-  - [Middleware (Logger, CORS)](#middleware-logger-cors)
-  - [Rate Limiting](#rate-limiting)
-  - [Frontend (HTML, Tailwind CSS, JavaScript)](#frontend-html-tailwind-css-javascript)
-- [Flow of Execution](#flow-of-execution)
-  - [1. Application Startup](#1-application-startup)
-  - [2. URL Shortening Request](#2-url-shortening-request)
-  - [3. URL Resolution Request](#3-url-resolution-request)
-- [Future Goals](#future-goals)
+## Stack
 
----
+- Go 1.25.
+- Gin for HTTP routing and middleware.
+- PostgreSQL with `pgx/v5` and Tern migrations.
+- Redis for caching, jobs, and background processing.
+- Clerk for authentication.
+- New Relic for APM, distributed tracing, and custom events.
+- Zerolog for structured logs.
+- Asynq for background jobs.
+- Resend for transactional email.
+- Bun and Turbo for monorepo scripts at the root.
 
-## Live Deployment
+## Design Goals
 
-The project is deployed on Render and is available here:
+- Keep the application layer thin and framework-specific concerns isolated.
+- Centralize configuration, observability, and error handling.
+- Make the boilerplate easy to clone for another product without changing the architecture.
+- Keep the code production-oriented without forcing every integration to be mandatory on day one.
 
-https://url-shortning-service-msrq.onrender.com
+## Repository Layout
 
-## Project Overview
-
-The service allows users to:
-
-1.  **Shorten URLs**: Provide a long URL and receive a short, unique identifier.
-2.  **Custom Aliases**: Optionally specify a custom short code for their URL.
-3.  **Expiry**: Set an expiry duration for the shortened URL.
-4.  **Redirection**: Access the original long URL by navigating to the shortened link.
-5.  **Clipboard Actions**: Copy the generated short URL as a plain URL, a rich clickable link, or a Markdown link.
-6.  **Custom Link Label**: Customize the visible text used for rich-link and Markdown copy actions.
-7.  **Rate Limiting**: Control API usage to prevent abuse.
-
-## Key Technologies and Concepts
-
-### Go (Golang)
-
--   **Explanation**: Go is an open-source, statically typed, compiled programming language designed for building simple, reliable, and efficient software. It's known for its strong concurrency features and performance.
--   **Usage in Project**: Go serves as the primary language for developing the backend API. It handles all server-side logic, including request parsing, database interactions, business logic (like URL validation and short code generation), and response generation.
-
-### Fiber Web Framework
-
--   **Explanation**: Fiber is an Express.js-inspired web framework built on top of Fasthttp, the fastest HTTP engine for Go. It's designed for speed and ease of use, making it ideal for building high-performance APIs.
--   **Usage in Project**: Fiber is used to:
-    -   Define API endpoints (`/api/v1` for shortening, `/:url` for resolving).
-    -   Handle incoming HTTP requests and route them to appropriate handlers.
-    -   Parse request bodies (JSON).
-    -   Serve static frontend files (`index.html`, CSS, JS).
-    -   Apply middleware for logging and CORS.
-    -   Construct and send JSON responses and HTTP redirects.
-
-    ```go
-    // api/main.go
-    func setupRoutes(app *fiber.App) {
-        app.Static("/", "./public", fiber.Static{
-            Index: "index.html",
-        })
-        app.Post("/api/v1", routes.ShortenURL)
-        app.Get("/:url", routes.ResolveURL)
-    }
-    ```
-
-### Redis
-
--   **Explanation**: Redis (Remote Dictionary Server) is an open-source, in-memory data structure store, used as a database, cache, and message broker. It supports various data structures like strings, hashes, lists, sets, and sorted sets. Its in-memory nature makes it extremely fast.
--   **Usage in Project**: Redis is central to the service's functionality:
-    -   **URL Mapping Storage**: Stores the mapping between short codes and original long URLs. Each short URL is a key, and the long URL is its value, with an optional expiry. (Using DB 0)
-    -   **Rate Limiting**: Tracks the number of API requests made by each client IP address within a time window. (Using DB 1)
-    -   **Visit Counter**: Increments a counter each time a shortened URL is resolved. (Using DB 1)
-
-### go-redis/redis/v8
-
--   **Explanation**: This is a popular and robust Redis client library for Go, providing an idiomatic interface to interact with Redis.
--   **Usage in Project**: It's used to establish connections to Redis, and perform operations like `SET` (store URL), `GET` (retrieve URL), `DECR` (decrement rate limit), `TTL` (get time-to-live), and `INCR` (increment visit counter).
-
-    ```go
-    // api/database/database.go
-    package database
-
-    import (
-    	"context"
-    	"os"
-
-    	"github.com/go-redis/redis/v8"
-    )
-
-    var Ctx = context.Background()
-
-    func CreateClient(dbNo int) *redis.Client {
-    	rdb := redis.NewClient(&redis.Options{
-    		Addr:     os.Getenv("REDIS_ADDRESS"),
-    		Password: os.Getenv("REDIS_PASSWORD"),
-    		DB:       dbNo,
-    	})
-    	return rdb
-    }
-    ```
-
-### godotenv
-
--   **Explanation**: A Go package that loads environment variables from a `.env` file into `os.Getenv()`. This is crucial for managing configuration settings without hardcoding them directly into the application.
--   **Usage in Project**: Used in `main.go` to load sensitive information and configuration parameters like `REDIS_ADDRESS`, `REDIS_PASSWORD`, `API_QUOTA`, and `DOMAIN` from the `.env` file.
-
-### govalidator
-
--   **Explanation**: A Go package for validating strings, including common formats like URLs, emails, and UUIDs.
--   **Usage in Project**: In the `ShortenURL` handler, `govalidator.IsURL()` is used to ensure that the URL provided by the user is in a valid format before processing.
-
-    ```go
-    // api/routes/shorten.go (inside ShortenURL function)
-    // ...
-    if !govalidator.IsURL(body.URL) {
-        return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid url"})
-    }
-    // ...
-    ```
-
-### google/uuid
-
--   **Explanation**: A Go package for generating universally unique identifiers (UUIDs) based on RFC 4122.
--   **Usage in Project**: When a user does not provide a `custom_short` alias, a unique 6-character ID is generated using `uuid.New().String()[:6]` to serve as the short code for the URL.
-
-### Middleware (Logger, CORS)
-
--   **Explanation**: Middleware functions are executed before or after the main request handler. They can perform tasks like logging, authentication, data compression, or handling cross-origin requests.
--   **Usage in Project**:
-    -   **Logger**: `app.Use(logger.New())` logs details about incoming HTTP requests (e.g., method, path, status, latency) to the console, which is useful for debugging and monitoring.
-    -   **CORS**: `app.Use(cors.New())` enables Cross-Origin Resource Sharing, allowing the frontend application (served from a potentially different origin) to make requests to the backend API.
-
-### Rate Limiting
-
--   **Explanation**: Rate limiting is a strategy to control the number of requests a user or client can make to an API within a given time window. It prevents abuse, protects resources, and ensures fair usage.
--   **Usage in Project**: Implemented using Redis DB 1. Each client's IP address is used as a key, storing their remaining request quota. A `TTL` (Time To Live) is set on this key to reset the quota periodically. If a client exceeds their quota, further requests are blocked until the reset period.
-
-    ```go
-    // api/routes/shorten.go (inside ShortenURL function)
-    // ...
-    r2 := database.CreateClient(1) // connect to redis client db 1 where rate limits are stored
-    defer r2.Close()
-
-    value, err := r2.Get(database.Ctx, c.IP()).Result()
-    if err == redis.Nil {
-        _ = r2.Set(database.Ctx, c.IP(), os.Getenv("API_QUOTA"), 30*60*time.Second).Err()
-    } else {
-        valInt, _ := strconv.Atoi(value)
-        if valInt <= 0 {
-            limit, _ := r2.TTL(database.Ctx, c.IP()).Result()
-            return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{"error": "rate limit exceeded", "rate_limit_reset": limit})
-        }
-    }
-    // ...
-    r2.Decr(database.Ctx, c.IP()) // Decrement after successful processing
-    // ...
-    ```
-
-### Frontend (HTML, Tailwind CSS, JavaScript)
-
--   **Explanation**: Standard web technologies used to create the user interface. HTML structures the content, Tailwind CSS provides utility-first styling, and JavaScript handles client-side interactivity and API communication.
--   **Usage in Project**: The `public/index.html` file, along with its linked CSS and JavaScript, provides a user-friendly interface for:
-    -   Inputting a long URL.
-    -   Optionally specifying a custom short alias and expiry.
-    -   Submitting the request to the backend API.
-    -   Displaying the shortened URL in a branded format.
-    -   Allowing the result to be copied as a plain short URL.
-    -   Allowing the result to be copied as a rich clickable link for supported editors.
-    -   Allowing the result to be copied as a Markdown link.
-    -   Allowing the user to customize the copied link label for rich-link and Markdown formats.
-    -   Showing error messages from the API.
-
-## Flow of Execution
-
-### 1. Application Startup
-
--   The `main.go` file loads environment variables from `.env`.
--   A new Fiber application instance is created.
--   Global middleware (logger for request logging, CORS for cross-origin requests) is applied.
--   Routes are configured:
-    -   Static files from the `public` directory are served (e.g., `index.html`).
-    -   `POST /api/v1` is mapped to the `ShortenURL` handler.
-    -   `GET /:url` is mapped to the `ResolveURL` handler for redirection.
--   The Fiber app starts listening for incoming HTTP requests on the configured port.
-
-### 2. URL Shortening Request
-
--   A user interacts with the frontend (`index.html`) and submits a long URL (and optional custom alias/expiry).
--   The frontend JavaScript sends a `POST` request to `/api/v1` with the URL data.
--   The `ShortenURL` handler in `api/routes/shorten.go` is invoked:
-    1.  **Rate Limiting**: It connects to Redis DB 1. It checks the client's IP address against a rate limit. If the limit is exceeded, an error is returned. Otherwise, the quota is initialized or decremented later.
-    2.  **Input Parsing & Validation**: The request body is parsed. The provided URL is validated using `govalidator.IsURL()`, and checks are performed to prevent shortening the service's own domain. `http://` or `https://` is enforced.
-    3.  **Short Code Generation**: If a `custom_short` is provided, it's used. Otherwise, a 6-character UUID is generated.
-    4.  **Redis Storage**: It connects to Redis DB 0. It checks if the generated/custom short code already exists. If so, a "forbidden" error is returned. If not, the short code (key) and original URL (value) are stored in Redis with the specified expiry (defaulting to 24 hours if not provided).
-    5.  **Rate Limit Update**: The client's request count in Redis DB 1 is decremented.
-    6.  **Response**: A JSON response containing the original URL, the generated short URL, expiry, and updated rate limit information is returned to the client.
-
-    ```go
-    // api/routes/shorten.go (core Redis interaction)
-    // ...
-    // Check if custom short is already in use
-    value, _ = r.Get(database.Ctx, id).Result()
-    if value != "" {
-        return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "url custom short is already in use"})
-    }
-
-    // Set the URL in the database with expiry
-    err = r.Set(database.Ctx, id, body.URL, body.Expiry*3600*time.Second).Err()
-    if err != nil {
-        return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "could not shorten url"})
-    }
-    // ...
-    ```
-
-### 3. URL Resolution Request
-
--   A user navigates to a shortened URL (e.g., `yourdomain.com/my-short-link`).
--   The `ResolveURL` handler in `api/routes/resolve.go` is invoked:
-    1.  **Extract Short Code**: The short code (`my-short-link` in the example) is extracted from the URL parameters.
-    2.  **Redis Lookup**: It connects to Redis DB 0. The short code is used as a key to retrieve the original long URL from Redis.
-    3.  **Error Handling**: If the key is not found (`redis.Nil`), a 404 "Not Found" error is returned. If any other Redis error occurs, a 500 "Internal Server Error" is returned.
-    4.  **Visit Counter**: It connects to Redis DB 1 and increments a global "counter" key to track total visits.
-    5.  **Redirection**: The user's browser is redirected to the retrieved original long URL using an HTTP 301 (Moved Permanently) status code.
-
-    ```go
-    // api/routes/resolve.go (core Redis interaction and redirection)
-    // ...
-    url := c.Params("url")
-    r := database.CreateClient(0)
-    defer r.Close()
-
-    value, err := r.Get(database.Ctx, url).Result()
-    if err == redis.Nil {
-        return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "short not found in the database"})
-    } else if err != nil {
-        return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "could not resolve short url"})
-    }
-
-    // Increment visit counter
-    rInr := database.CreateClient(1)
-    defer rInr.Close()
-    _ = rInr.Incr(database.Ctx, "counter")
-
-    // Redirect to original URL
-    return c.Redirect(value, fiber.StatusMovedPermanently)
-    ```
-
-## Future Goals
-
-1.  **Permanent URL Redirecting Service**: Implement an option for users to create shortened URLs that do not expire, or have a significantly longer expiry period, suitable for permanent links. This would involve a different storage strategy or a specific flag in the Redis entry.
+```text
+.
+├── package.json               # Root monorepo scripts and workspace definition
+├── turbo.json                 # Turbo task orchestration
+├── apps/
+│   └── backend/               # Gin backend service
+│       ├── cmd/go-boilerplate # Server entrypoint
+│       ├── internal/          # Private application code
+│       ├── static/            # OpenAPI HTML and JSON
+│       ├── templates/         # Email templates
+│       ├── Taskfile.yml       # Backend tasks
+│       └── .env.sample        # Environment template
+└── packages/                  # Shared workspace packages
 ```
 
-## Flow of Execution
+## Backend Architecture
 
-### Running the Project Locally with Docker
+The backend follows a clean layered shape:
 
-This project is containerized and can be easily run using Docker and Docker Compose.
+- `cmd`: process startup, graceful shutdown, dependency wiring.
+- `internal/config`: environment loading and validation.
+- `internal/database`: PostgreSQL pool setup, migrations, and shutdown.
+- `internal/server`: application container and lifecycle management.
+- `internal/router`: route registration and middleware ordering.
+- `internal/middleware`: request ID, auth, tracing, logging, CORS, recovery, rate limiting.
+- `internal/handler`: HTTP handlers and the generic handler pipeline.
+- `internal/service`: business logic and integration services.
+- `internal/repository`: persistence layer placeholders and future repositories.
+- `internal/lib`: shared subsystems such as email and background jobs.
+- `internal/sqlerr`: Postgres error normalization.
+- `internal/validation`: bind-and-validate helpers and request validation.
 
-**Prerequisites:**
-*   Docker
-*   Docker Compose
+The app is intentionally organized so each layer has a single job:
 
-**1. Create Environment File**
+- handlers deal with HTTP shape and request/response conversion.
+- services coordinate business behavior.
+- repositories handle persistence.
+- middleware handles request-wide cross-cutting concerns.
+- config and observability are initialized once and passed down.
 
-Before running the application, you need to create a `.env` file in the `api/` directory. A `.env.example` file should be provided in the `api/` directory. You can copy it to create your own configuration:
+## Request Flow
+
+1. `main.go` loads config from environment variables.
+2. Logger, New Relic, database, Redis, job services, repositories, services, and handlers are initialized.
+3. Gin router is created and middleware is attached in a fixed order.
+4. Requests receive a request ID, structured logging, tracing, auth context, validation, and standardized error formatting.
+5. Responses are emitted through the shared handler helpers so JSON, file, and no-content responses behave consistently.
+
+## Gin Interface
+
+The boilerplate is Gin-native across the request lifecycle:
+
+- `*gin.Context` is used throughout handlers and middleware.
+- middleware returns `gin.HandlerFunc`.
+- response writing uses Gin primitives like `c.JSON`, `c.Data`, `c.AbortWithStatusJSON`, and `c.Writer`.
+- tracing uses `nrgin` rather than Echo instrumentation.
+- request binding and context access use Gin-compatible helpers.
+
+There is no Echo framework dependency in the backend Go code.
+
+## Configuration
+
+Configuration is loaded from environment variables prefixed with `BOILERPLATE_`.
+
+The sample file is [apps/backend/.env.sample](apps/backend/.env.sample).
+
+### Core Keys
+
+- `BOILERPLATE_PRIMARY.ENV`
+- `BOILERPLATE_SERVER.PORT`
+- `BOILERPLATE_SERVER.READ_TIMEOUT`
+- `BOILERPLATE_SERVER.WRITE_TIMEOUT`
+- `BOILERPLATE_SERVER.IDLE_TIMEOUT`
+- `BOILERPLATE_SERVER.CORS_ALLOWED_ORIGINS`
+- `BOILERPLATE_DATABASE.HOST`
+- `BOILERPLATE_DATABASE.PORT`
+- `BOILERPLATE_DATABASE.USER`
+- `BOILERPLATE_DATABASE.PASSWORD`
+- `BOILERPLATE_DATABASE.NAME`
+- `BOILERPLATE_DATABASE.SSL_MODE`
+- `BOILERPLATE_DATABASE.MAX_OPEN_CONNS`
+- `BOILERPLATE_DATABASE.MAX_IDLE_CONNS`
+- `BOILERPLATE_DATABASE.CONN_MAX_LIFETIME`
+- `BOILERPLATE_DATABASE.CONN_MAX_IDLE_TIME`
+- `BOILERPLATE_AUTH.SECRET_KEY`
+- `BOILERPLATE_INTEGRATION.RESEND_API_KEY`
+- `BOILERPLATE_REDIS.ADDRESS`
+
+### Observability Keys
+
+- `BOILERPLATE_OBSERVABILITY.SERVICE_NAME`
+- `BOILERPLATE_OBSERVABILITY.ENVIRONMENT`
+- `BOILERPLATE_OBSERVABILITY.LOGGING.LEVEL`
+- `BOILERPLATE_OBSERVABILITY.LOGGING.FORMAT`
+- `BOILERPLATE_OBSERVABILITY.LOGGING.SLOW_QUERY_THRESHOLD`
+- `BOILERPLATE_OBSERVABILITY.NEW_RELIC.LICENSE_KEY`
+- `BOILERPLATE_OBSERVABILITY.NEW_RELIC.APP_LOG_FORWARDING_ENABLED`
+- `BOILERPLATE_OBSERVABILITY.NEW_RELIC.DISTRIBUTED_TRACING_ENABLED`
+- `BOILERPLATE_OBSERVABILITY.NEW_RELIC.DEBUG_LOGGING`
+- `BOILERPLATE_OBSERVABILITY.HEALTH_CHECKS.ENABLED`
+- `BOILERPLATE_OBSERVABILITY.HEALTH_CHECKS.INTERVAL`
+- `BOILERPLATE_OBSERVABILITY.HEALTH_CHECKS.TIMEOUT`
+- `BOILERPLATE_OBSERVABILITY.HEALTH_CHECKS.CHECKS`
+
+## Startup Behavior
+
+The backend entrypoint is [apps/backend/cmd/go-boilerplate/main.go](apps/backend/cmd/go-boilerplate/main.go).
+
+Startup sequence:
+
+1. Load and validate config.
+2. Initialize the New Relic logger service.
+3. Run database migrations outside local development.
+4. Create the server container.
+5. Build repositories, services, and handlers.
+6. Register router and middleware.
+7. Start HTTP server.
+8. Wait for SIGINT and shut down gracefully.
+
+## Middleware Stack
+
+Middleware is layered to keep behavior predictable:
+
+- CORS.
+- recovery.
+- request ID injection.
+- New Relic request instrumentation.
+- tracing enrichment.
+- context enrichment with logger and user metadata.
+- request logging.
+- global error handling.
+- rate limiting.
+
+This ordering matters because logging, tracing, and context enrichment depend on earlier middleware having already populated request metadata.
+
+## Taskfile
+
+The backend task file is [apps/backend/Taskfile.yml](apps/backend/Taskfile.yml).
+
+Available tasks:
+
+- `task help`: list all tasks.
+- `task run`: start the backend.
+- `task test`: run `go test ./...`.
+- `task migrations:new name=<name>`: create a new migration file.
+- `task migrations:up`: apply all migrations.
+- `task migrations:down`: roll back the last migration.
+- `task tidy`: format, tidy, and verify Go modules.
+
+Migration tasks use `tern` and the `BOILERPLATE_DB_DSN` environment variable.
+
+## Dependencies
+
+Root workspace tooling:
+
+- Bun for package management.
+- Turbo for task orchestration.
+- TypeScript for shared workspace packages.
+
+Backend runtime dependencies:
+
+- Gin.
+- Clerk.
+- New Relic.
+- pgx / pgx-zerolog.
+- Redis client and Asynq.
+- Resend.
+- Zerolog.
+- Validator.
+
+## Deployment Notes
+
+The boilerplate is designed so a project can be moved toward production without redesigning the foundation:
+
+- set all required environment variables.
+- configure CORS origins correctly.
+- provide PostgreSQL and Redis connectivity.
+- configure Clerk secret key and New Relic license key.
+- enable migrations before first start.
+- run the backend through the taskfile or a container entrypoint, not by ad hoc commands.
+
+## Testing
+
+Run backend validation with:
 
 ```bash
-cp api/.env.example api/.env
+cd apps/backend
+go test ./...
 ```
 
-Your `api/.env` file should look like this:
+## Notes for Future Projects
 
-```dotenv
-# Port for the Go application
-APP_PORT=4000
-
-# The public-facing domain of the service
-DOMAIN=http://localhost:4000
-
-# Redis connection details (db is the service name in docker-compose.yml)
-REDIS_ADDRESS=db:6379
-REDIS_PASSWORD=
-
-# Number of requests allowed per IP in a 30-minute window
-API_QUOTA=10
-```
-
-**2. Build and Run the Containers**
-
-From the root directory of the project (where `docker-compose.yml` is located), run the following command:
-
-```bash
-docker-compose up --build
-```
-
-This command builds the Docker images for the Go backend and Redis, then starts the containers. The API will be accessible at `http://localhost:4000`.
-
-**3. Stopping the Application**
-
-To stop and remove the containers, networks, and volumes created by `docker-compose up`, run:
-
-```bash
-docker-compose down
-```
-
-**4. Cleaning Up Docker Resources**
-
-To remove all unused containers, networks, and images to free up disk space, you can use the `prune` command.
-
-```bash
-docker system prune -a
-```
-> **Warning:** This command is destructive and will remove all stopped containers, unused networks, and dangling images. Use with caution.
-
-### 1. Application Startup
-
--   The `main.go` file loads environment variables from `.env`.
+This boilerplate is intentionally opinionated, but the application layer should be replaceable without changing the platform layer. For a new project, keep the architecture and initialization flow, then swap the domain services, handlers, repositories, and migrations as needed.

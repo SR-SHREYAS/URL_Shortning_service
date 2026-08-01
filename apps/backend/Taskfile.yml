@@ -1,0 +1,67 @@
+version: '3'
+
+vars:
+  BOILERPLATE_DB_DSN: '{{.BOILERPLATE_DB_DSN | default ""}}'
+
+tasks:
+  help:
+    desc: print this help message
+    cmds:
+    - task --list-all
+    silent: true
+
+  confirm:
+    desc: confirmation prompt
+    cmds:
+    - |
+      printf 'Are you sure? [y/N] ' && read ans && [ ${ans:-N} = y ]
+    silent: true
+    internal: true
+
+  run:
+    desc: run the Gin backend application
+    cmds:
+    - go run ./cmd/go-boilerplate
+
+  test:
+    desc: run the backend test suite
+    cmds:
+    - go test ./...
+
+  migrations:new:
+    desc: create a new database migration
+    vars:
+      NAME: '{{.name | default ""}}'
+    cmds:
+    - |
+      if [ -z "{{.NAME}}" ]; then
+        printf '%s\n' "Error: name parameter is required"
+        printf '%s\n' "Usage: task migrations:new name=migration_name"
+        exit 1
+      fi
+    - printf '%s\n' 'Creating migration file for {{.NAME}}...'
+    - tern new -m ./internal/database/migrations {{.NAME}}
+
+  migrations:up:
+    desc: apply all up database migrations
+    deps: [ confirm ]
+    cmds:
+    - printf '%s\n' 'Running up migrations...'
+    - tern migrate -m ./internal/database/migrations --conn-string {{.BOILERPLATE_DB_DSN}}
+
+  migrations:down:
+    desc: roll back the last database migration
+    deps: [ confirm ]
+    cmds:
+    - printf '%s\n' 'Rolling back the last migration...'
+    - tern migrate -m ./internal/database/migrations --conn-string {{.BOILERPLATE_DB_DSN}} -d -1
+
+  tidy:
+    desc: format all .go files, then tidy and verify module dependencies
+    cmds:
+    - printf '%s\n' 'Formatting .go files...'
+    - go fmt ./...
+    - printf '%s\n' 'Tidying module dependencies...'
+    - go mod tidy
+    - printf '%s\n' 'Verifying dependencies...'
+    - go mod verify
